@@ -7,3 +7,7 @@ Randomness serves a vital role in nearly every aspect of current society，the i
 ### Proposal Details
 We hope to create a new Random number generation scheme in a completely decentralized network environment，utilizing the eventual consistency capability of Hetu logical clocks, and integrate VRF that generates an output that can be cryptographically verified as random，without the need for any trusted third parties or consensus algorithms. 
 
+![alt text](vlc-vrf.png)
+
+* Each node can act as a randomness generator and randomness validator
+* When a randomness has been verified t times and passed, it means that the randomness is valid.
