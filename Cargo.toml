@@ -12,6 +12,7 @@ members = [
     "tools/replication-control",
     "tools/replication-control-messages",
     "tools/kademlia-control-messages", "demos/test_conflict",
+    "zchronod/zchronod"
 ]
 
 [profile.release]
@@ -39,3 +40,4 @@ tokio-util = "0.7.10"
 [lib]
 name = "test"
 path = "src/lib.rs"
+
