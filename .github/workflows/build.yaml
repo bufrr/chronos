@@ -1,0 +1,27 @@
+name: Build and upload the artifact
+
+on:
+  push:
+    branches: [poc_1]
+  pull_request:
+    branches: [poc_1]
+
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    name: build rust action
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build
+        run: cargo build --release
+
+      # the artifact to upload
+      - name: artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chronos
+          path: target/release/libtest.d
