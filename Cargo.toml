@@ -12,6 +12,7 @@ members = [
     "tools/replication-control",
     "tools/replication-control-messages",
     "tools/kademlia-control-messages", 
+    "demos/test_conflict",
     "demos/coll-tx",
 ]
 
@@ -36,3 +37,7 @@ secp256k1 = { version = "0.28.0", features = [
 ] }
 tokio = { version = "1.33.0", features = ["full"] }
 tokio-util = "0.7.10"
+
+[lib]
+name = "test"
+path = "src/lib.rs"
