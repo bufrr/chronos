@@ -48,7 +48,7 @@ impl SimpleUTXO {
         }
     }
 
-    /// new SimpleUTXO with inputs and outpus
+    /// new SimpleUTXO with inputs and outputs
     pub fn new_with_inputs_outputs(
         inputs: Vec<TxInput>,
         outputs: Vec<TxOutput>,
