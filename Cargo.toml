@@ -11,7 +11,9 @@ members = [
     "crates/cops",
     "tools/replication-control",
     "tools/replication-control-messages",
-    "tools/kademlia-control-messages", "demos/test_conflict",
+    "tools/kademlia-control-messages", 
+    "demos/test_conflict",
+    "demos/coll-tx",
 ]
 
 [profile.release]
