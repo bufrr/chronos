@@ -57,7 +57,7 @@ mod tests {
         let tutxo = SimpleUTXO::new_with_inputs_outputs(vec![tin], vec![tout]);
 
         let vec_id = tutxo.tx_id();
-        let vec_raw_tx = tutxo.encode().clone();
+        let vec_raw_tx = tutxo.encode();
         let txid = std::str::from_utf8(&vec_id).unwrap_or("Invalid UTF-8 sequence");
         let raw_tx = std::str::from_utf8(&vec_raw_tx).unwrap_or("Invalid UTF-8 sequence");
         
