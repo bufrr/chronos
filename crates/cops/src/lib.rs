@@ -65,7 +65,7 @@ struct Sync {
 /// System configuration. Contains a list of server addresses.
 #[derive(Debug, Clone)]
 pub struct Configuration {
-    server_addrs: Vec<SocketAddr>,
+    pub server_addrs: Vec<SocketAddr>,
 }
 
 impl Configuration {
@@ -209,7 +209,7 @@ impl Client {
 ///
 /// Todo: use per-key clock
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct ServerState {
+pub struct ServerState {
     clock: Clock,
     id: u128,
     store: HashMap<String, (String, u32)>,
@@ -226,7 +226,7 @@ impl ServerState {
     }
 
     /// Retrieve a value from the store.
-    fn read(&mut self, key: &str) -> Option<String> {
+    pub fn read(&mut self, key: &str) -> Option<String> {
         match self.store.get_mut(key) {
             Some((value, _)) => Some(value.clone()),
             None => None,
@@ -363,6 +363,10 @@ impl Server {
     /// Handle a sync message.
     async fn handle_sync(&mut self, sync: Sync) {
         self.state.merge(&sync.state);
+    }
+
+    pub fn get_server_state(&self) -> &ServerState {
+        return &self.state;
     }
 
     /// Start the storage node.
