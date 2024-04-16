@@ -12,7 +12,7 @@ members = [
     "tools/replication-control",
     "tools/replication-control-messages",
     "tools/kademlia-control-messages",
-    "zchronod/zchronod"
+    "zchronod/zchronod",
     "demos/test_conflict",
     "demos/coll-tx",
 ]
