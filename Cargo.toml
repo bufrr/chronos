@@ -11,7 +11,8 @@ members = [
     "crates/cops",
     "tools/replication-control",
     "tools/replication-control-messages",
-    "tools/kademlia-control-messages", 
+    "tools/kademlia-control-messages",
+    "zchronod/zchronod",
     "demos/test_conflict",
     "demos/coll-tx",
 ]
@@ -41,3 +42,4 @@ tokio-util = "0.7.10"
 [lib]
 name = "test"
 path = "src/lib.rs"
+

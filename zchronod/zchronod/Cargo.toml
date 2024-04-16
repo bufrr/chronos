@@ -1,0 +1,16 @@
+
+[package]
+name = "Zchronod"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tools = { version = "0.1.0", path = "../tools" }
+node_api = {version ="0.1.0", path = "../node_api" }
+db_sql ={version = "0.1.0", path = "../db_sql" }
+websocket = {version = "0.1.0", path = "../websocket" }
+structopt = "0.3.11"
+tracing = "0.1.26"
+tokio = { version = "1.36.0", features = ["full"] }
