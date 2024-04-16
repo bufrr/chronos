@@ -1,0 +1,61 @@
+[package]
+name = "p2p"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = { version = "1.37.0" , features = ["full"]}
+serde = { version = "1.0", features = ["derive"] }
+serde_bytes = "0.11"
+serde_json = { version = "1.0.51", features = [ "preserve_order" ] }
+ghost_actor = "=0.3.0-alpha.6"
+futures = "0.3"
+itertools = "0.11.0"
+parking_lot = "0.12.1"
+tx5 = { version = "=0.0.8-alpha", optional = true }
+nanoid = "0.4"
+url2 = "0.0.6"
+thiserror = "1.0.22"
+tracing = "0.1"
+rand = "0.8.5"
+num-traits = "0.2"
+tx5-signal-srv = "=0.0.8-alpha"
+blake2b_simd = { version = "0.5.10" }
+maplit = { version = "1", optional = true }
+mockall = { version = "0.11.3", optional = true }
+hex = "0.4.3"
+
+kitsune_p2p = { version = "^0.3.0-beta-dev.35", path = "../kitsune_p2p/kitsune_p2p",features = ["test_utils", "fuzzing", "sqlite"] }
+kitsune_p2p_types = { version = "^0.3.0-beta-dev.24", path = "../kitsune_p2p/types", features = ["test_utils"] }
+kitsune_p2p_bootstrap_client = { version = "^0.3.0-beta-dev.30", path = "../kitsune_p2p/bootstrap_client" }
+kitsune_p2p_bootstrap = { path = "../kitsune_p2p/bootstrap", features = ["sqlite"] }
+kitsune_p2p_block = { version = "^0.3.0-beta-dev.21", path = "../kitsune_p2p/block" }
+fixt = { path = "../fixt", version = "^0.3.0-beta-dev.3"}
+kitsune_p2p_bin_data = { version = "^0.3.0-beta-dev.19", path = "../kitsune_p2p/bin_data" }
+kitsune_p2p_fetch = { path = "../kitsune_p2p/fetch", features = ["test_utils"] }
+kitsune_p2p_timestamp = { path = "../kitsune_p2p/timestamp", features = ["now", "arbitrary"] }
+rusqlite = { version = "0.29", features = ["bundled"] }
+clap = { version = "4.5.4", features = ["derive"] }
+
+[lints]
+workspace = true
+
+[features]
+default = ["tx5" ]
+
+test_utils = [
+    "tokio/test-util",
+    "ghost_actor/test_utils",
+    "kitsune_p2p_types/test_utils",
+    "kitsune_p2p_types/fixt",
+    "kitsune_p2p_bin_data/fixt",
+    "maplit",
+    "mockall",
+]
+
+mock_network = [
+    "kitsune_p2p_types/test_utils",
+    "mockall",
+]
