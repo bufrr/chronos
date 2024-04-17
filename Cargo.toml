@@ -15,6 +15,7 @@ members = [
     "zchronod/zchronod",
     "demos/test_conflict",
     "demos/coll-tx",
+    "demos/vlc-dag"
 ]
 
 [profile.release]
