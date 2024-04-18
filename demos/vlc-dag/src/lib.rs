@@ -266,39 +266,50 @@ impl ServerState {
         match self.clock_info.clock.partial_cmp(&msg.from.clock) {
             Some(cmp::Ordering::Equal) => {},
             Some(cmp::Ordering::Greater) => {},
-            Some(cmp::Ordering::Less) | None => {
-                self.items.extend(msg.diffs);  // message id represent message 
+            Some(cmp::Ordering::Less) => {
+                self.items.extend(msg.diffs.clone());  // message id represent message 
                 self.clock_info = msg.from.clone();
                 self.clock_info.clock.inc(self.id);
                 self.clock_to_eventid.insert(msg.from.clock.index_key(), msg.from.message_id);
+                self.message_id_set.extend(msg.diffs);
                 return true;
+            }
+            None => {
+                self.clock_info.clock.merge(&vec![&msg.from.clock]);
+                let add = self.add(msg.diffs);
+                if !add {
+                    return true;
+                }
             }
         }
         false
     }
 
-    fn handle_active_sync(&mut self, msg: ActiveSync, db: Arc<RwLock<VLCLLDb>>) -> Option<ServerMessage> {
+    fn handle_active_sync(&mut self, msg: ActiveSync, db: Arc<RwLock<VLCLLDb>>) -> (Option<ServerMessage>, bool){
         match self.clock_info.clock.partial_cmp(&msg.latest.clock) {
-            Some(cmp::Ordering::Equal) => None,
-            Some(cmp::Ordering::Greater) => None,
+            Some(cmp::Ordering::Equal) => return (None, false),
+            Some(cmp::Ordering::Greater) => return (None, false),
             Some(cmp::Ordering::Less) => {
                 // Calculate clock diff 
-                self.items.extend(msg.diffs);  // message id represent message 
+                self.items.extend(msg.diffs.clone());  // message id represent message 
                 self.clock_info = msg.latest.clone();
                 self.clock_info.clock.inc(self.id);
-                None
+                self.message_id_set.extend(msg.diffs);
+                (None, true)
             }
             None => {
                 // let from_clock = self.clock_info.clone();
                 // let pre_items = self.items.clone();
                 // Todo: Calculate diff 
                 // Todo: simulator
+                let init_clock = self.clock_info.clock.clone();
                 self.clock_info.clock.merge(&vec![&msg.latest.clock]);
                 let add = self.add(msg.diffs);
                 if !add {
-                    return None;
+                    self.clock_info.clock = init_clock;
+                    return (None, false);
                 }
-                None
+                (None, true)
 
                 /* 
                 Follow code may led to recursive merge
@@ -396,7 +407,7 @@ impl Server {
                 }
             }
             Message::FromServer(msg) => {
-                println!("FromServer: {:?}", msg);
+                println!("FromServer: {:?}, cur_clock: {:?}", msg, self.state.clock_info.clock);
                 match msg {
                     ServerMessage::EventTrigger(msg) => {
                         if let Some(msg) = self.state.handle_event_trigger(msg) {
@@ -416,11 +427,13 @@ impl Server {
                         }
                     }
                     ServerMessage::ActiveSync(msg) => {
-                        if let Some(send_msg) = self.state.handle_active_sync(msg.clone(), self.db.clone()) {
+                        let (ret_msg, merged) = self.state.handle_active_sync(msg.clone(), self.db.clone());
+                        if let Some(send_msg) = ret_msg {
                             self.broadcast_state(send_msg).await;
                         }
-
-                        self.sinker_merge_log(&msg.latest).await;
+                        if merged {
+                            self.sinker_merge_log(&msg.latest).await;
+                        }
                     }
                     _ => { println!("[broadcast_state]: not support ServerMessage ")}
                 }
@@ -641,8 +654,11 @@ mod tests {
         // Run client
         let mut client = Client::new(&config).await;
         for i in 0..server_nums {
-            let str = format!("{}-hello", i);
-            client.disseminate(&str, i).await;
+            let str1 = format!("{}-hello", i);
+            client.disseminate(&str1, i).await;
+            
+            let str2 = format!("{}-world", i);
+            client.disseminate(&str2, i).await;
         }
         // End test
         tokio::time::sleep(time::Duration::from_millis(100)).await;
@@ -654,7 +670,39 @@ mod tests {
         assert!(states[0][0] == "0-hello");
         assert!(states[1][0] == "1-hello");
         assert!(states[8][0] == "8-hello");
-        assert!(states.iter().all(|s| s.len() == server_nums));
+        assert!(states.iter().all(|s| s.len() == 2 * server_nums));
+    }
+
+    #[tokio::test]
+    async fn multi_servers_some_clients() {
+        let server_nums = 50;
+        let some = 2;
+        // Start servers
+        let (config, handles) = start_servers(server_nums).await;
+        // Run client
+        let mut client = Client::new(&config).await;
+        for i in 0..server_nums {
+            let str1 = format!("{}-hello", i);
+            client.disseminate(&str1, i).await;
+            
+            let str2 = format!("{}-world", i);
+            client.disseminate(&str2, i).await;
+
+            if i == some {
+                break;
+            }
+        }
+        // End test
+        tokio::time::sleep(time::Duration::from_millis(100)).await;
+        terminate(&config).await;
+        let states = collect_states(handles).await;
+        for value in states.clone() {
+            println!("{:?}", value);
+        }
+        assert!(states[0][0] == "0-hello");
+        assert!(states[1][0] == "1-hello");
+        assert!(states[2][0] == "2-hello");
+        assert!(states.iter().all(|s| s.len() == 2 * (some+1)));
     }
 
     #[test]
