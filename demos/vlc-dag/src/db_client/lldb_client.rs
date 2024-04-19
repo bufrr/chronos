@@ -9,11 +9,15 @@ pub struct VLCLLDb {
 }
 
 impl VLCLLDb {
-    pub fn new(path: &str) -> Self {
-        const USER_DIR: u32 = 0o777;
+    pub fn new(path: &str, mode: Option<u32>) -> Self {
+        let mut USER_DIR_MODE: u32 = 0o777;
+        if let Some(mode) = mode {
+            USER_DIR_MODE = mode;
+        }
+
         let env = Environment::new()
             .max_dbs(5)
-            .open(path, USER_DIR)
+            .open(path, USER_DIR_MODE)
             .expect("Failed to open the environment");
 
         let merge_log = env
@@ -36,7 +40,7 @@ impl VLCLLDb {
         let db = txn.bind(&self.clock_infos);
 
         let _ = db.set(&key, &serde_json::to_string(&clock_info).unwrap());
-        println!("【insert clock to DB】: \nkey: {},\nvalue: {:#?}", key, clock_info);
+        println!("[insert clock to DB]: \nkey: {},\nvalue: {:#?}", key, clock_info);
     }
 
     pub(crate) fn add_merge_log(&mut self, key: String, merge_log: MergeLog) {
@@ -44,12 +48,12 @@ impl VLCLLDb {
         let db = txn.bind(&self.merge_log);
 
         let _ = db.set(&key, &serde_json::to_string(&merge_log).unwrap());
-        println!("【insert merge_log to DB】:  \nkey: {},\nvalue: {:#?}", key, merge_log);
+        println!("[insert merge_log to DB]:  \nkey: {},\nvalue: {:#?}", key, merge_log);
     }
 
     pub fn get_clock_info(&mut self, key: String) -> String {
         let txn = self.env.new_transaction().unwrap();
         let db = txn.bind(&self.clock_infos);
-        db.get::<&str>(&key).unwrap().to_string()
+        db.get::<&str>(&key).unwrap_or("").to_string()
     }
 }

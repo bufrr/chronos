@@ -157,7 +157,7 @@ impl ServerState {
             clock_info: ClockInfo {
                 clock: Clock::new(),
                 id,
-                message_id: "".to_string(),
+                message_id: String::new(),
                 count: 0,
                 create_at: get_time_ms(),
             },
@@ -170,45 +170,25 @@ impl ServerState {
 
     /// Add items into the state. Returns true if resulting in a new state.
     fn add(&mut self, items: Vec<String>) -> bool {
-        if items.len() < 1 {
-            false
-        } else {
-            for it in items.clone() {
-                // filter replicate message id
-                if self.message_id_set.contains(&it) {
-                    continue;
-                }
-                self.items.push(it.clone());
-                self.message_id_set.insert(it);
-            }
-            self.clock_info.clock.inc(self.id);
-            self.clock_info.count += 1;
-            if let Some(last) = items.last() {
-                self.clock_info.message_id = last.to_string();
-            }
-            true
-        }
-    }
+        if items.is_empty() {
+            return false;
+        } 
 
-    /// Deprecated
-    /// Merge another ServerState into the current state. Returns true if
-    /// resulting in a new state (different from current and received
-    /// state). return first bool is need_broadcast, second bool is need_log
-    fn merge(&mut self, other: &Self) -> (bool, bool) {
-        match self.clock_info.clock.partial_cmp(&other.clock_info.clock) {
-            Some(cmp::Ordering::Equal) => return (false, false),
-            Some(cmp::Ordering::Greater) => return (false, false),
-            Some(cmp::Ordering::Less) => {
-                self.clock_info = other.clock_info.clone();
-                self.items = other.items.clone();
-                (false, true)
-            }
-            None => {
-                self.clock_info.clock.merge(&vec![&other.clock_info.clock]);
-                let add = self.add(other.items.clone());
-                (add, add)
+        for item in items.iter() {
+            // filter replicate message id
+            if !self.message_id_set.contains(item) {
+                self.items.push(item.clone());
+                self.message_id_set.insert(item.clone());
             }
         }
+
+        self.clock_info.clock.inc(self.id);
+        self.clock_info.count += 1;
+        if let Some(last) = items.last() {
+            self.clock_info.message_id = last.to_string();
+        }
+
+        true
     }
 
     fn handle_event_trigger(&mut self, msg: EventTrigger) -> Option<ServerMessage> {
@@ -221,7 +201,6 @@ impl ServerState {
                 Some(req)
             }
             None => {
-                // Todo: Calculate diff 
                 let base = self.clock_info.clock.base_common(&msg.clock_info.clock);
                 if base.is_genesis() {
                     let req = ServerMessage::ActiveSync(ActiveSync { diffs: self.items.clone(), latest: self.clock_info.clone(), to: msg.clock_info.id });
@@ -244,15 +223,14 @@ impl ServerState {
     }
 
     fn handle_diff_req(&mut self, msg: DiffReq, db: Arc<RwLock<VLCLLDb>>) -> Option<ServerMessage> {
-        println!("Key-To-messageid: {:?}", self.clock_to_eventid);
+        // println!("Key-To-messageid: {:?}", self.clock_to_eventid);
         if msg.from_clock.count == 0 {
             let req = ServerMessage::DiffRsp(DiffRsp { diffs: self.items.clone(), from:self.clock_info.clone(), to: msg.from_clock.id });
             return Some(req);
         }
-        let empty_str = "".to_string();
+        let empty_str = String::new();
         let start_msg_id =self.clock_to_eventid.get(&msg.from_clock.clock.index_key()).unwrap_or(&empty_str);
         // get begin from start_msg_id to end of state set
-        // Todo: simulator
         if let Some(diff_msg_ids) = get_suffix(&self.items, start_msg_id.to_string()) {
             let req = ServerMessage::DiffRsp(DiffRsp { diffs: diff_msg_ids,from:self.clock_info.clone(), to: msg.from_clock.id });
             Some(req)
@@ -262,7 +240,6 @@ impl ServerState {
     }
 
     fn handle_diff_rsp(&mut self, msg: DiffRsp, db: Arc<RwLock<VLCLLDb>>) -> bool {
-        // Todo: simulator
         match self.clock_info.clock.partial_cmp(&msg.from.clock) {
             Some(cmp::Ordering::Equal) => {},
             Some(cmp::Ordering::Greater) => {},
@@ -290,7 +267,6 @@ impl ServerState {
             Some(cmp::Ordering::Equal) => return (None, false),
             Some(cmp::Ordering::Greater) => return (None, false),
             Some(cmp::Ordering::Less) => {
-                // Calculate clock diff 
                 self.items.extend(msg.diffs.clone());  // message id represent message 
                 self.clock_info = msg.latest.clone();
                 self.clock_info.clock.inc(self.id);
@@ -449,7 +425,7 @@ impl Server {
         let mut clock_infos = self.state.clock_info.clone();
         let id = self.state.id;
         let count = clock_infos.clock.get(self.state.id);
-        let key = id.to_string() + "-" + &count.to_string() + "-vertex";
+        let key = format!("{}-{}-vertex", id, count);
         let time = get_time_ms();
         let clock_info = ClockInfo {
             clock: clock_infos.clock,
@@ -470,7 +446,7 @@ impl Server {
         let from_id = fclock_info.id;
         let mut fclock = fclock_info.clone();
         let fcount = fclock.clock.get(fclock_info.id);
-        let key = from_id.to_string() + "-" + &fcount.to_string()+ "-" + &to_id.to_string() + "-" + &tcount.to_string() + "-edge";
+        let key =  format!("{}-{}-{}-{}-edge", from_id, fcount, to_id, tcount);
         let time = get_time_ms();
         let merge_log = MergeLog {
             from_id,
@@ -586,7 +562,7 @@ mod tests {
             let addr = format!("127.0.0.1:{}", port + i).parse().unwrap();
             config.server_addrs.push(addr);
         }
-        let db = Arc::new(RwLock::new(VLCLLDb::new("./db")));
+        let db = Arc::new(RwLock::new(VLCLLDb::new("./db", None)));
         let mut handles = Vec::new();
         for i in 0..n_server {
             let c = config.clone();
