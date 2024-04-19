@@ -3,12 +3,12 @@ mod node_factory;
 mod storage;
 
 use std::path::PathBuf;
-use zchronod_tools::tokio_zhronod;
-use zchronod_node_api::config;
+use tools::tokio_zhronod;
+use node_api::config;
 use structopt::StructOpt;
-use zchronod_node_api::error::{ZchronodConfigError, ZchronodConfigResult, ZchronodError, ZchronodResult};
+use node_api::error::{ZchronodConfigError, ZchronodConfigResult, ZchronodError, ZchronodResult};
 use tracing::*;
-use zchronod_node_api::config::ZchronodConfig;
+use node_api::config::ZchronodConfig;
 use crate::zchronod::ZchronodArc;
 use crate::zchronod::Zchronod;
 

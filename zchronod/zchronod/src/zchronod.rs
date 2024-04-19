@@ -16,8 +16,8 @@ pub(crate) async fn p2p_event_loop(arc_zchronod: Arc<Zchronod>) {}
 
 /// sample handler
 pub(crate) async fn handle_incoming_ws_msg() {
-    let ws_config = Arc::new(zchronod_websocket::WebsocketConfig::default());
-    let l = zchronod_websocket::WebsocketListener::bind(ws_config, "127.0.0.1:8080").await.unwrap();
+    let ws_config = Arc::new(websocket::WebsocketConfig::default());
+    let l = websocket::WebsocketListener::bind(ws_config, "127.0.0.1:8080").await.unwrap();
 
     let addr = l.local_addr().unwrap();
 

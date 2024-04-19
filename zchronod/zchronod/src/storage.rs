@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use zchronod_node_api::config::ZchronodConfig;
-use zchronod_db_sql::api::{DbKindZchronod, DbWrite};
+use node_api::config::ZchronodConfig;
+use db_sql::api::{DbKindZchronod, DbWrite};
 
 pub struct Storage {
     zchronod_db: DbWrite<DbKindZchronod>,
