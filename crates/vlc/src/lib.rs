@@ -59,6 +59,12 @@ impl Clock {
         *value += 1;
     }
 
+    /// Get the clock count by id
+    pub fn get(&mut self, id: u128) -> u128 {
+        let value = self.values.entry(id).or_insert(0);
+        *value
+    }
+
     /// Reset the clock.
     pub fn clear(&mut self) {
         self.values.clear();
@@ -73,6 +79,50 @@ impl Clock {
             }
         }
     }
+
+    /// Diff is local clock minus another clock
+    pub fn diff(&self, other: &Clock) -> Clock {
+        let mut ret = Clock::new();
+        for (id, v1) in &self.values {
+            let v2 = other.values.get(id).unwrap_or(&0);
+            if v1 > v2 {
+                ret.values.insert(*id, v1-v2);
+            } else {
+                ret.values.insert(*id, 0);
+            }
+        }
+        ret
+    }
+
+    /// return index key of clock
+    pub fn index_key(&self) -> String {
+        let mut key: String = String::new();
+        for (index, value) in &self.values {
+            key = format!("{}{}-{}-", key, index, value);
+        }
+        key
+    }
+
+    /// return common base clock of two clock
+    pub fn base_common(&self, other: &Clock) -> Clock {
+        let mut ret = Clock::new();
+        for (id, v1) in &self.values {
+            let v2 = other.values.get(id).unwrap_or(&0);
+            if v1 <= v2 {
+                ret.values.insert(*id, *v1);
+            } else {
+                ret.values.insert(*id, *v2);
+            }
+        }
+        ret
+    }
+
+    /// return true when all value is zero in clock dimensions
+    pub fn is_genesis(&self) -> bool {
+        let sum: u128 = self.values.values().sum();
+        sum == 0
+    }
+    
 }
 
 #[cfg(test)]
