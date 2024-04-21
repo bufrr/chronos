@@ -22,6 +22,7 @@ use std::{
     },
 };
 use std::hash::Hash;
+use tokio::sync::mpsc::UnboundedSender;
 use tx5::{Error, Id};
 use kitsune_p2p::dht::hash::hash_slice_32;
 use kitsune_p2p_types::dependencies::lair_keystore_api;
@@ -54,6 +55,7 @@ impl TestLegacyHost {
         &mut self,
         agent_store: Arc<parking_lot::RwLock<Vec<AgentInfoSigned>>>,
         op_store: Arc<parking_lot::RwLock<Vec<TestHostOp>>>,
+        tx: UnboundedSender<Vec<u8>>,
         receivers: Vec<Receiver<KitsuneP2pEvent>>,
     ) {
         if self.handle.is_some() {
@@ -64,6 +66,7 @@ impl TestLegacyHost {
             let keystore = self.keystore.clone();
             let events_record = self.events.clone();
             let duplicate_ops_received_count = self.duplicate_ops_received_count.clone();
+            //let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
             async move {
                 let mut receiver = futures::stream::select_all(receivers).fuse();
                 while let Some(evt) = receiver.next().await {
@@ -207,15 +210,17 @@ impl TestLegacyHost {
                             //let client = self.keystore.clone();
                             // let store = agent_store.read();
                             // let v = store.first().unwrap();
+                            let pp = payload.clone();
+                            tx.send(payload).expect("TODO: panic message");
                             let mut key = [0; 32];
                             key.copy_from_slice(to_agent.0.as_slice());
                             let h = hash_slice_32(key.as_slice());
-                            let v1 = payload.clone().to_vec();
+                            //let v1 = payload.clone().to_vec();
                             let h_hex = hex::encode(h);
                             println!(" to: {}", h_hex);
                             //let p = v1.into_iter().chain(v2).collect();
                             // Echo the request payload
-                            respond.respond(Ok(async move { Ok(payload) }.boxed().into()))
+                            respond.respond(Ok(async move { Ok(pp) }.boxed().into()))
                         }
                         KitsuneP2pEvent::ReceiveOps { respond, ops, .. } => {
                             let mut op_store = op_store.write();

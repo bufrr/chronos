@@ -6,7 +6,7 @@ use kitsune_p2p::KitsuneBinType;
 use kitsune_p2p_bin_data::{KitsuneAgent, KitsuneBasis, KitsuneSpace};
 use kitsune_p2p_fetch::FetchContext;
 use kitsune_p2p_types::{KAgent, KitsuneTimeout};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use kitsune_p2p_types::dependencies::holochain_trace;
 use kitsune_p2p_types::dependencies::rustls::internal::msgs::base::Payload;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
@@ -18,6 +18,13 @@ use p2p::common::{KitsuneTestHarness, RecordedKitsuneP2pEvent, start_bootstrap, 
 use kitsune_p2p::dht::hash::hash_slice_32;
 
 use clap::Parser;
+
+use futures_util::{FutureExt, SinkExt, StreamExt};
+use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use tokio::sync::RwLock;
+use warp::Filter;
+use tokio_stream::wrappers::{ReceiverStream, UnboundedReceiverStream};
+use warp::ws::{Message, WebSocket};
 
 #[derive(Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None)]
@@ -51,9 +58,52 @@ async fn main() {
         Arc::new(KitsuneAgent(decoded))
     });
 
-    spawn_node_task(&name, &connection_url, &passphrase, signal_url, bootstrap_addr, sendto).await;
+    let (tx1, rx1) = tokio::sync::mpsc::unbounded_channel();
+    let (tx2, rx2) = tokio::sync::mpsc::unbounded_channel();
+    let rx2 = Arc::new(RwLock::new(rx2));
 
-    tokio::time::sleep(std::time::Duration::from_secs(3000)).await;
+
+    spawn_node_task(&name, &connection_url, &passphrase, signal_url, bootstrap_addr, sendto, rx1, tx2).await;
+
+    //spawn_ws(tx).await;
+    let routes = warp::path("vlc")
+        // The `ws()` filter will prepare Websocket handshake...
+        .and(warp::ws())
+        .map(move |ws: warp::ws::Ws| {
+            // This will call our function if the handshake succeeds.
+            let tx = tx1.clone();
+            let rx2 = rx2.clone();
+            ws.on_upgrade(move |websocket| pipe(websocket, tx, rx2))
+        });
+    warp::serve(routes).run(([127, 0, 0, 1], 30005)).await;
+}
+
+async fn pipe(ws: WebSocket, tx: UnboundedSender<Vec<u8>>, mut rx: Arc<RwLock<UnboundedReceiver<Vec<u8>>>>) {
+    let (mut ws_tx, mut ws_rx) = ws.split();
+
+    tokio::spawn(async move {
+        let mut rx = rx.write().await;
+        while let Some(msg) = rx.recv().await {
+            ws_tx.send(Message::binary(msg)).await.expect("send ws msg panic");
+        }
+    });
+
+    while let Some(result) = ws_rx.next().await {
+        let msg = match result {
+            Ok(msg) => msg,
+            Err(_) => {
+                break;
+            }
+        };
+        if msg.is_text() {
+            tx.send(msg.clone().into_bytes()).expect("send ws msg panic");
+            if let Ok(text) = msg.to_str() {
+                println!("Received text: {}", text);
+            }
+        } else if msg.is_binary() {
+            println!("Received binary: {:?}", msg.into_bytes());
+        }
+    }
 }
 
 async fn spawn_node_task(
@@ -63,13 +113,15 @@ async fn spawn_node_task(
     signal_url: SocketAddr,
     bootstrap_addr: SocketAddr,
     sendto: Option<KAgent>,
+    mut rx: UnboundedReceiver<Vec<u8>>,
+    tx: UnboundedSender<Vec<u8>>,
 ) {
     let connection_url = connection_url.to_owned();
     let passphrase = passphrase.to_owned();
     let name = name.to_owned();
 
     tokio::spawn(async move {
-        run_node(&name, &connection_url, &passphrase, signal_url, bootstrap_addr, sendto).await;
+        run_node(&name, &connection_url, &passphrase, signal_url, bootstrap_addr, sendto, rx, tx).await;
     });
 }
 
@@ -80,8 +132,10 @@ async fn run_node(
     signal_url: SocketAddr,
     bootstrap_addr: SocketAddr,
     sendto: Option<KAgent>,
+    mut rx: UnboundedReceiver<Vec<u8>>,
+    tx: UnboundedSender<Vec<u8>>,
 ) -> () {
-    let mut harness = KitsuneTestHarness::try_new(name, passphrase, connection_url)
+    let mut harness = KitsuneTestHarness::try_new(name, passphrase, connection_url, tx)
         .await
         .expect("Failed to setup test harness")
         .configure_tx5_network(signal_url)
@@ -111,18 +165,15 @@ async fn run_node(
     tokio::time::sleep(std::time::Duration::from_secs(3)).await;
 
     if let Some(to) = sendto {
-        for i in 0..100 {
+        while let Some(msg) = rx.recv().await {
             let response = sender.rpc_single(
                 space.clone(),
                 to.clone(),
-                i.to_string().as_bytes().to_vec(),
+                msg,
                 Some(5_000),
             ).await.unwrap();
 
             println!("Response: {:?}", String::from_utf8(response));
-            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
         }
     }
-
-    tokio::time::sleep(std::time::Duration::from_secs(3000)).await;
 }

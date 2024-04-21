@@ -3513,6 +3513,7 @@ dependencies = [
  "clap 4.5.4",
  "fixt",
  "futures",
+ "futures-util",
  "ghost_actor",
  "hex",
  "itertools 0.11.0",
@@ -3536,10 +3537,12 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio",
+ "tokio-stream",
  "tracing",
  "tx5",
  "tx5-signal-srv",
  "url2",
+ "warp",
 ]
 
 [[package]]

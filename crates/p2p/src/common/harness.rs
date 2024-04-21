@@ -12,6 +12,7 @@ use kitsune_p2p_types::{
     KAgent,
 };
 use parking_lot::RwLock;
+use tokio::sync::mpsc::UnboundedSender;
 use tokio::task::AbortHandle;
 use kitsune_p2p_types::dependencies::lair_keystore_api::dependencies::sodoken::BufRead;
 
@@ -23,10 +24,11 @@ pub struct KitsuneTestHarness {
     legacy_host_api: TestLegacyHost,
     agent_store: Arc<RwLock<Vec<AgentInfoSigned>>>,
     op_store: Arc<RwLock<Vec<TestHostOp>>>,
+    tx: UnboundedSender<Vec<u8>>,
 }
 
 impl KitsuneTestHarness {
-    pub async fn try_new(name: &str, passphrase: &str, connection_url: &str) -> KitsuneP2pResult<Self> {
+    pub async fn try_new(name: &str, passphrase: &str, connection_url: &str, tx: UnboundedSender<Vec<u8>>) -> KitsuneP2pResult<Self> {
         let keystore = test_keystore(passphrase.clone().as_bytes(), connection_url);
         let agent_store = Arc::new(RwLock::new(Vec::new()));
         let op_store = Arc::new(RwLock::new(Vec::new()));
@@ -46,6 +48,7 @@ impl KitsuneTestHarness {
             legacy_host_api,
             agent_store,
             op_store,
+            tx,
         })
     }
 
@@ -107,7 +110,7 @@ impl KitsuneTestHarness {
 
     pub async fn start_legacy_host(&mut self, receivers: Vec<KitsuneP2pEventReceiver>) {
         self.legacy_host_api
-            .start(self.agent_store.clone(), self.op_store.clone(), receivers)
+            .start(self.agent_store.clone(), self.op_store.clone(), self.tx.clone(), receivers)
             .await;
     }
 
