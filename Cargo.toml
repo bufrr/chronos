@@ -29,6 +29,7 @@ members = [
     "crates/kitsune_p2p/transport_quic",
     "crates/kitsune_p2p/types",
     "crates/p2p",
+    "crates/protos",
 ]
 
 [workspace.lints.clippy]

@@ -26,6 +26,8 @@ use warp::Filter;
 use tokio_stream::wrappers::{ReceiverStream, UnboundedReceiverStream};
 use warp::ws::{Message, WebSocket};
 
+use protos::message::ZMessage;
+
 #[derive(Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -35,6 +37,9 @@ struct Args {
     passphrase: String,
     signal_url: String,
     bootstrap_url: String,
+
+    #[arg(short, long)]
+    listen_url: String,
 
     #[arg(short, long)]
     sendto: Option<String>,
@@ -52,20 +57,15 @@ async fn main() {
     let signal_url = args.signal_url.to_owned();
     let bootstrap_addr: SocketAddr = addr_bootstrap.parse().unwrap();
     let signal_url: SocketAddr = signal_url.parse().unwrap();
-
-    let sendto = args.sendto.map(|sendto| {
-        let decoded = hex::decode(sendto).unwrap();
-        Arc::new(KitsuneAgent(decoded))
-    });
+    let listen_url: SocketAddr = args.listen_url.parse().unwrap();
 
     let (tx1, rx1) = tokio::sync::mpsc::unbounded_channel();
     let (tx2, rx2) = tokio::sync::mpsc::unbounded_channel();
     let rx2 = Arc::new(RwLock::new(rx2));
 
 
-    spawn_node_task(&name, &connection_url, &passphrase, signal_url, bootstrap_addr, sendto, rx1, tx2).await;
+    spawn_node_task(&name, &connection_url, &passphrase, signal_url, bootstrap_addr, rx1, tx2).await;
 
-    //spawn_ws(tx).await;
     let routes = warp::path("vlc")
         // The `ws()` filter will prepare Websocket handshake...
         .and(warp::ws())
@@ -75,35 +75,41 @@ async fn main() {
             let rx2 = rx2.clone();
             ws.on_upgrade(move |websocket| pipe(websocket, tx, rx2))
         });
-    warp::serve(routes).run(([127, 0, 0, 1], 30005)).await;
+    warp::serve(routes).run(listen_url).await;
 }
 
-async fn pipe(ws: WebSocket, tx: UnboundedSender<Vec<u8>>, mut rx: Arc<RwLock<UnboundedReceiver<Vec<u8>>>>) {
+async fn pipe(
+    ws: WebSocket,
+    tx: UnboundedSender<Vec<u8>>,
+    rx: Arc<RwLock<UnboundedReceiver<Vec<u8>>>>,
+) {
     let (mut ws_tx, mut ws_rx) = ws.split();
 
-    tokio::spawn(async move {
+    let receiver_task = tokio::spawn(async move {
         let mut rx = rx.write().await;
         while let Some(msg) = rx.recv().await {
-            ws_tx.send(Message::binary(msg)).await.expect("send ws msg panic");
+            if let Err(e) = ws_tx.send(Message::binary(msg)).await {
+                eprintln!("Failed to send WebSocket message: {}", e);
+                break;
+            }
         }
     });
 
-    while let Some(result) = ws_rx.next().await {
-        let msg = match result {
-            Ok(msg) => msg,
-            Err(_) => {
-                break;
+    let sender_task = tokio::spawn(async move {
+        while let Some(result) = ws_rx.next().await {
+            match result {
+                Ok(msg)  => {
+                    tx.send(msg.into_bytes()).expect("Failed to send message");
+                }
+                Err(e) => {
+                    eprintln!("WebSocket error: {}", e);
+                    break;
+                }
             }
-        };
-        if msg.is_text() {
-            tx.send(msg.clone().into_bytes()).expect("send ws msg panic");
-            if let Ok(text) = msg.to_str() {
-                println!("Received text: {}", text);
-            }
-        } else if msg.is_binary() {
-            println!("Received binary: {:?}", msg.into_bytes());
         }
-    }
+    });
+
+    let _ = tokio::try_join!(receiver_task, sender_task);
 }
 
 async fn spawn_node_task(
@@ -112,8 +118,7 @@ async fn spawn_node_task(
     passphrase: &str,
     signal_url: SocketAddr,
     bootstrap_addr: SocketAddr,
-    sendto: Option<KAgent>,
-    mut rx: UnboundedReceiver<Vec<u8>>,
+    rx: UnboundedReceiver<Vec<u8>>,
     tx: UnboundedSender<Vec<u8>>,
 ) {
     let connection_url = connection_url.to_owned();
@@ -121,7 +126,7 @@ async fn spawn_node_task(
     let name = name.to_owned();
 
     tokio::spawn(async move {
-        run_node(&name, &connection_url, &passphrase, signal_url, bootstrap_addr, sendto, rx, tx).await;
+        run_node(&name, &connection_url, &passphrase, signal_url, bootstrap_addr, rx, tx).await;
     });
 }
 
@@ -131,10 +136,11 @@ async fn run_node(
     passphrase: &str,
     signal_url: SocketAddr,
     bootstrap_addr: SocketAddr,
-    sendto: Option<KAgent>,
     mut rx: UnboundedReceiver<Vec<u8>>,
     tx: UnboundedSender<Vec<u8>>,
 ) -> () {
+    use prost::Message;
+
     let mut harness = KitsuneTestHarness::try_new(name, passphrase, connection_url, tx)
         .await
         .expect("Failed to setup test harness")
@@ -164,16 +170,19 @@ async fn run_node(
 
     tokio::time::sleep(std::time::Duration::from_secs(3)).await;
 
-    if let Some(to) = sendto {
-        while let Some(msg) = rx.recv().await {
-            let response = sender.rpc_single(
-                space.clone(),
-                to.clone(),
-                msg,
-                Some(5_000),
-            ).await.unwrap();
 
-            println!("Response: {:?}", String::from_utf8(response));
-        }
+    while let Some(msg) = rx.recv().await {
+        let msg = prost::bytes::Bytes::from(msg);
+        let m = ZMessage::decode(msg.clone()).unwrap();
+        let decoded = hex::decode(m.to.clone()).unwrap();
+        let to = Arc::new(KitsuneAgent(decoded));
+        let response = sender.rpc_single(
+            space.clone(),
+            to.clone(),
+            msg.to_vec(),
+            Some(5_000),
+        ).await.unwrap();
+
+        println!("Response: {:?}", String::from_utf8(response));
     }
 }
