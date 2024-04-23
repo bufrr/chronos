@@ -370,14 +370,20 @@ impl TestLegacyHost {
     }
 
     pub async fn get_agent(&self, tag: &str) -> KAgent {
-        let entry = self.keystore.get_entry(tag.into()).await.unwrap();
-        match entry {
-            LairEntryInfo::Seed { tag, seed_info } => {
-                Arc::new(KitsuneAgent(seed_info.ed25519_pub_key.clone().0.to_vec()))
+        match self.keystore.get_entry(tag.into()).await {
+            Ok(entry) => match entry {
+                LairEntryInfo::Seed { tag, seed_info } => {
+                    Arc::new(KitsuneAgent(seed_info.ed25519_pub_key.clone().0.to_vec()))
+                }
+                _ => self.create_agent(tag).await,
+            },
+            Err(e) => {
+                // Handle the error here
+                // For example, you can log the error and return a default agent
+                eprintln!("Error getting entry: {}", e);
+                self.create_agent(tag).await
             }
-            _ => self.create_agent(tag).await,
         }
-        //Arc::new(KitsuneAgent(x25519_pub.0.to_vec()))
     }
 }
 

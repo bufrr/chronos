@@ -77,59 +77,7 @@ async fn read_stdin(tx: futures_channel::mpsc::UnboundedSender<Message>, from: S
         };
         let mut buf2 = vec![];
         msg.encode(&mut buf2).unwrap();
+        //println!("buf: {:?}", buf2);
         tx.unbounded_send(Message::binary(buf2)).unwrap();
     }
 }
-//
-// pub fn websocket_client(url: &str) {
-//     let rt = Runtime::new().unwrap();
-//
-//     rt.block_on(async {
-//         // Connect to the WebSocket server
-//         let (mut socket, response) =
-//             connect(Url::parse(url).unwrap()).expect("Failed to connect");
-//
-//         let socket = Arc::new(Mutex::new(socket));
-//         let send_socket = Arc::clone(&socket);
-//         let receive_socket = Arc::clone(&socket);
-//
-//
-//         tokio::spawn(async move {
-//             // Continuously read and print messages from the server
-//             loop {
-//                 let msg = receive_socket.lock().unwrap()
-//                     .read().expect("Error reading message");
-//                 match msg {
-//                     Message::Binary(bin_msg) => {
-//                         let received_msg = ZMessage::decode(bin_msg.as_slice()).unwrap();
-//                         println!("from : {:?}, data: {:?}", received_msg.from, received_msg.data);
-//                     }
-//                     _ => println!("Received non-binary message"),
-//                 }
-//             }
-//         });
-//
-//         // Continuously read user input and send messages to the server
-//         let stdin = io::stdin();
-//         for line in stdin.lock().lines() {
-//             let input = line.expect("Failed to read line");
-//             let input_bytes = input.into_bytes();
-//
-//             // Construct the ZMessage
-//             let msg = ZMessage {
-//                 from: Vec::from("0fd53dd387a3e0dc97fe7322be53a9e582a821243fe83270ec3d5f1bce5c6d8f".to_string()),
-//                 to: Vec::from("ef036d780db5a9ddbce5cdd2f09a75c52574e173af48ec58ecdb3889347b7a98".to_string()),
-//                 data: input_bytes,
-//                 ..Default::default()
-//             };
-//
-//             // Convert the ZMessage to bytes and send it
-//             let mut buf = vec![];
-//             msg.encode(&mut buf).unwrap();
-//             send_socket.lock().unwrap()
-//                 .send(Message::Binary(buf))
-//                 .expect("Failed to send message");
-//         }
-//     });
-// }
-

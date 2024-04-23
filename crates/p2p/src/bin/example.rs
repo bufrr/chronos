@@ -1,29 +1,15 @@
-use fixt::prelude::*;
-use kitsune_p2p::actor::BroadcastData;
 use kitsune_p2p::actor::KitsuneP2pSender;
-use kitsune_p2p::fixt::KitsuneSpaceFixturator;
 use kitsune_p2p::KitsuneBinType;
 use kitsune_p2p_bin_data::{KitsuneAgent, KitsuneBasis, KitsuneSpace};
-use kitsune_p2p_fetch::FetchContext;
-use kitsune_p2p_types::{KAgent, KitsuneTimeout};
 use std::sync::{Arc, Mutex};
-use kitsune_p2p_types::dependencies::holochain_trace;
-use kitsune_p2p_types::dependencies::rustls::internal::msgs::base::Payload;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::thread::spawn;
 use hex::ToHex;
-use rusqlite::Connection;
-use serde_json::to_vec;
 use p2p::common::{KitsuneTestHarness, RecordedKitsuneP2pEvent, start_bootstrap, start_signal_srv, TestHostOp, wait_for_connected};
-use kitsune_p2p::dht::hash::hash_slice_32;
-
 use clap::Parser;
-
 use futures_util::{FutureExt, SinkExt, StreamExt};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::sync::RwLock;
 use warp::Filter;
-use tokio_stream::wrappers::{ReceiverStream, UnboundedReceiverStream};
 use warp::ws::{Message, WebSocket};
 
 use protos::message::ZMessage;
@@ -98,7 +84,7 @@ async fn pipe(
     let sender_task = tokio::spawn(async move {
         while let Some(result) = ws_rx.next().await {
             match result {
-                Ok(msg)  => {
+                Ok(msg) => {
                     tx.send(msg.into_bytes()).expect("Failed to send message");
                 }
                 Err(e) => {
