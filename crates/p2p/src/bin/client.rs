@@ -7,6 +7,7 @@ use url::Url;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 use prost::Message as ProstMessage;
+use fixt::fixt;
 use kitsune_p2p_bin_data::KitsuneAgent;
 use kitsune_p2p_types::KAgent;
 use protos::message::ZMessage;
@@ -70,6 +71,7 @@ async fn read_stdin(tx: futures_channel::mpsc::UnboundedSender<Message>, from: S
             continue;
         }
         let msg = ZMessage {
+            id: vec![1,2,3,4,5,6],
             from: Vec::from(from.clone()),
             to: Vec::from(to.clone()),
             data: buf,
@@ -77,7 +79,7 @@ async fn read_stdin(tx: futures_channel::mpsc::UnboundedSender<Message>, from: S
         };
         let mut buf2 = vec![];
         msg.encode(&mut buf2).unwrap();
-        //println!("buf: {:?}", buf2);
+        println!("buf: {:?}", buf2);
         tx.unbounded_send(Message::binary(buf2)).unwrap();
     }
 }
