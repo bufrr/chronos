@@ -17,10 +17,27 @@ enum ZType {
     Z_TYPE_RNG = 0;
     Z_TYPE_EVENT = 1;
     Z_TYPE_CLOCK = 2;
+    Z_TYPE_GATEWAY = 3;
 }
 
-message Rng {
-    uint32 version = 1;
-    uint64 num = 2;
-    bytes proof = 3;
+message ClockData {
+    map<uint64, uint64> values = 1;
+}
+
+message Clock {
+    ClockData clock = 1;
+    bytes id = 2;
+    bytes message_id = 3;
+    uint64 count = 4;
+    uint64 create_at = 5;
+}
+
+message MergeLog {
+    bytes from_id = 1;
+    bytes to_id = 2;
+    uint64 start_count = 3;
+    uint64 end_count = 4;
+    uint64 merge_at = 5;
+    ClockData s_clock = 6;
+    ClockData e_clock = 7;
 }

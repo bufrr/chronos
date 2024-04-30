@@ -113,14 +113,14 @@ impl Client {
     }
 
     /// Disseminate a string to the accumulator network.
-    pub async fn disseminate(&mut self, item: &str, id: usize) {
+    pub async fn disseminate(&mut self, item: &str, node_id: usize) {
         let msg = Message::FromClient(ClientMessage {
             item: String::from(item),
         });
         self.socket
             .send_to(
                 serde_json::to_string(&msg).unwrap().as_bytes(),
-                self.config.server_addrs[id],
+                self.config.server_addrs[node_id],
             )
             .await
             .unwrap();

@@ -14,7 +14,7 @@ use vlc::Clock;
 
 /// Message types.
 #[derive(Serialize, Deserialize, Debug)]
-enum Message {
+pub enum Message {
     Request(Request),
     Reply(Reply),
     Sync(Sync),
@@ -22,43 +22,43 @@ enum Message {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-enum Request {
+pub enum Request {
     Read(Read),
     Write(Write),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct Read {
-    key: String,
-    clock: Option<Clock>,
+pub struct Read {
+    pub key: String,
+    pub clock: Option<Clock>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct Write {
-    key: String,
-    value: String,
-    clock: Option<Clock>,
+pub struct Write {
+    pub key: String,
+    pub value: String,
+    pub clock: Option<Clock>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-enum Reply {
+pub enum Reply {
     ReadReply(ReadReply),
     WriteReply(WriteReply),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct ReadReply {
-    value: Option<String>,
+pub struct ReadReply {
+    pub value: Option<String>,
+    pub clock: Option<Clock>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct WriteReply {
     clock: Option<Clock>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct WriteReply {
-    clock: Option<Clock>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct Sync {
+pub struct Sync {
     state: ServerState,
 }
 
@@ -217,7 +217,7 @@ pub struct ServerState {
 
 impl ServerState {
     /// Create a new server state.
-    fn new(id: u128) -> Self {
+    pub fn new(id: u128) -> Self {
         Self {
             clock: Clock::new(),
             id,

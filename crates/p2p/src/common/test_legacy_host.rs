@@ -207,19 +207,13 @@ impl TestLegacyHost {
                         KitsuneP2pEvent::Call {
                             respond, to_agent, payload, ..
                         } => {
-                            //let client = self.keystore.clone();
-                            // let store = agent_store.read();
-                            // let v = store.first().unwrap();
                             let pp = payload.clone();
                             tx.send(payload).expect("TODO: panic message");
                             let mut key = [0; 32];
                             key.copy_from_slice(to_agent.0.as_slice());
                             let h = hash_slice_32(key.as_slice());
-                            //let v1 = payload.clone().to_vec();
                             let h_hex = hex::encode(h);
                             println!(" to: {}", h_hex);
-                            //let p = v1.into_iter().chain(v2).collect();
-                            // Echo the request payload
                             respond.respond(Ok(async move { Ok(pp) }.boxed().into()))
                         }
                         KitsuneP2pEvent::ReceiveOps { respond, ops, .. } => {

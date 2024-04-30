@@ -14,7 +14,8 @@ use kitsune_p2p_types::{
 use parking_lot::RwLock;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::task::AbortHandle;
-use kitsune_p2p_types::dependencies::lair_keystore_api::dependencies::sodoken::BufRead;
+use vlc::Clock;
+use cops::ServerState;
 
 pub struct KitsuneTestHarness {
     name: String,
@@ -25,6 +26,7 @@ pub struct KitsuneTestHarness {
     agent_store: Arc<RwLock<Vec<AgentInfoSigned>>>,
     op_store: Arc<RwLock<Vec<TestHostOp>>>,
     tx: UnboundedSender<Vec<u8>>,
+    server_state: ServerState,
 }
 
 impl KitsuneTestHarness {
@@ -40,6 +42,8 @@ impl KitsuneTestHarness {
             Arc::new(TestHost::new(keystore.clone(), agent_store.clone(), op_store.clone()).await);
         let legacy_host_api = TestLegacyHost::new(keystore);
 
+        let id = str_to_u128(name);
+
         Ok(Self {
             name: name.to_string(),
             config: Default::default(),
@@ -49,6 +53,7 @@ impl KitsuneTestHarness {
             agent_store,
             op_store,
             tx,
+            server_state: ServerState::new(id),
         })
     }
 
@@ -165,4 +170,8 @@ pub async fn start_signal_srv() -> (SocketAddr, tx5_signal_srv::SrvHnd) {
         tx5_signal_srv::exec_tx5_signal_srv(config).await.unwrap();
 
     (*addr_list.first().unwrap(), sig_hnd)
+}
+
+pub fn str_to_u128(s: &str) -> u128 {
+    u128::from_str_radix(s, 16).unwrap()
 }

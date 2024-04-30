@@ -21,13 +21,41 @@ pub struct ZMessage {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Rng {
-    #[prost(uint32, tag = "1")]
-    pub version: u32,
-    #[prost(uint64, tag = "2")]
-    pub num: u64,
+pub struct ClockData {
+    #[prost(map = "uint64, uint64", tag = "1")]
+    pub values: ::std::collections::HashMap<u64, u64>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Clock {
+    #[prost(message, optional, tag = "1")]
+    pub clock: ::core::option::Option<ClockData>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub id: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "3")]
-    pub proof: ::prost::alloc::vec::Vec<u8>,
+    pub message_id: ::prost::alloc::vec::Vec<u8>,
+    #[prost(uint64, tag = "4")]
+    pub count: u64,
+    #[prost(uint64, tag = "5")]
+    pub create_at: u64,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MergeLog {
+    #[prost(bytes = "vec", tag = "1")]
+    pub from_id: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "2")]
+    pub to_id: ::prost::alloc::vec::Vec<u8>,
+    #[prost(uint64, tag = "3")]
+    pub start_count: u64,
+    #[prost(uint64, tag = "4")]
+    pub end_count: u64,
+    #[prost(uint64, tag = "5")]
+    pub merge_at: u64,
+    #[prost(message, optional, tag = "6")]
+    pub s_clock: ::core::option::Option<ClockData>,
+    #[prost(message, optional, tag = "7")]
+    pub e_clock: ::core::option::Option<ClockData>,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
@@ -35,6 +63,7 @@ pub enum ZType {
     Rng = 0,
     Event = 1,
     Clock = 2,
+    Gateway = 3,
 }
 impl ZType {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -46,6 +75,7 @@ impl ZType {
             ZType::Rng => "Z_TYPE_RNG",
             ZType::Event => "Z_TYPE_EVENT",
             ZType::Clock => "Z_TYPE_CLOCK",
+            ZType::Gateway => "Z_TYPE_GATEWAY",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -54,6 +84,7 @@ impl ZType {
             "Z_TYPE_RNG" => Some(Self::Rng),
             "Z_TYPE_EVENT" => Some(Self::Event),
             "Z_TYPE_CLOCK" => Some(Self::Clock),
+            "Z_TYPE_GATEWAY" => Some(Self::Gateway),
             _ => None,
         }
     }

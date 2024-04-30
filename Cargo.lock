@@ -3517,6 +3517,7 @@ version = "0.1.0"
 dependencies = [
  "blake2b_simd 0.5.11",
  "clap 4.5.4",
+ "cops",
  "fixt",
  "futures",
  "futures-channel",
@@ -3554,6 +3555,7 @@ dependencies = [
  "tx5-signal-srv",
  "url",
  "url2",
+ "vlc",
  "warp",
 ]
 

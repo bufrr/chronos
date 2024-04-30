@@ -46,6 +46,8 @@ kitsune_p2p_bin_data = { version = "^0.3.0-beta-dev.19", path = "../kitsune_p2p/
 kitsune_p2p_fetch = { path = "../kitsune_p2p/fetch", features = ["test_utils"] }
 kitsune_p2p_timestamp = { path = "../kitsune_p2p/timestamp", features = ["now", "arbitrary"] }
 protos = { path = "../protos" }
+vlc = { path = "../vlc" }
+cops = { path = "../cops" }
 futures-channel = "0.3.30"
 
 
